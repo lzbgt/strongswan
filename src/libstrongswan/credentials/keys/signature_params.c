@@ -18,6 +18,83 @@
 #include <asn1/oid.h>
 #include <asn1/asn1_parser.h>
 
+/*
+ * Described in header
+ */
+bool signature_params_equal(signature_params_t *a, signature_params_t *b)
+{
+	if (a->scheme != b->scheme)
+	{
+		return FALSE;
+	}
+	if (!a->params && !b->params)
+	{
+		return TRUE;
+	}
+	if (a->params && b->params)
+	{
+		switch (a->scheme)
+		{
+			case SIGN_RSA_EMSA_PKCS1_PSS:
+			{
+				rsa_pss_params_t *pss_a, *pss_b;
+/* FIXME: handle default setting when comparing to set value */
+/* FIXME: wildcards? e.g. HASH_UNKNOWN */
+				return pss_a->hash == pss_b->hash &&
+					   pss_a->mgf1_hash == pss_b->mgf1_hash &&
+					   pss_a->salt_len == pss_b->salt_len;
+			}
+			default:
+				break;
+		}
+	}
+	return FALSE;
+}
+
+/*
+ * Described in header
+ */
+signature_params_t *signature_params_clone(signature_params_t *this)
+{
+	signature_params_t *clone;
+
+	INIT(clone,
+		.scheme = this->scheme,
+	);
+	if (this->params)
+	{
+		switch (this->scheme)
+		{
+			case SIGN_RSA_EMSA_PKCS1_PSS:
+			{
+				rsa_pss_params_t *pss, *pss_clone;
+
+				pss = this->params;
+				INIT(pss_clone,
+					.hash = pss->hash,
+					.mgf1_hash = pss->mgf1_hash,
+					.salt_len = pss->salt_len,
+					/* ignore salt as only used for unit tests */
+				);
+				clone->params = pss_clone;
+				break;
+			}
+			default:
+				break;
+		}
+	}
+	return clone;
+}
+
+/*
+ * Described in header
+ */
+void signature_params_destroy(signature_params_t *this)
+{
+	free(this->params);
+	free(this);
+}
+
 /**
  * ASN.1 definition of RSASSA-PSS-params
  */
